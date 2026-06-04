@@ -11,26 +11,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+Telugu:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
     <main class="page">
-      <div class="message" aria-live="polite">
-        <p class="message__text">
-          శ్రీ రామ లింగేశ్వర స్వామి అనుగ్రహం తో త్వరలో మీకు సేవ చెయ్యడానికి
-          వస్తున్నాం
-        </p>
-      </div>
+      <header class="message" aria-live="polite">
+        <div class="message__glow" aria-hidden="true"></div>
+        <div class="message__panel">
+          <p class="message__label">శ్రీ రామ లింగేశ్వర స్వామి</p>
+          <p class="message__text">
+            అనుగ్రహం తో త్వరలో మీకు సేవ చెయ్యడానికి వస్తున్నాం
+          </p>
+        </div>
+      </header>
 
-      <section class="scroll-stage" aria-hidden="true">
-        <div class="orbit">
-          <div class="orbit__ring"></div>
+      <section class="scroll-stage" aria-label="Temple photo slideshow">
+        <div class="slideshow">
+          <div class="slideshow__frame">
+            <div class="slideshow__track"></div>
+          </div>
         </div>
       </section>
-
-      <div class="scroll-spacer"></div>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>

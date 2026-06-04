@@ -1,8 +1,8 @@
 import "./style.css";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Observer } from "gsap/Observer";
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(Observer);
 
 const images = [
   { src: "/images/temple-gate.jpg", alt: "Keesaragutta temple main gate" },
@@ -15,88 +15,106 @@ const images = [
   { src: "/images/temple-gate-small.jpg", alt: "Keesara gutta main temple gate" },
 ];
 
-const orbit = document.querySelector(".orbit");
-const scrollStage = document.querySelector(".scroll-stage");
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const track = document.querySelector(".slideshow__track");
+const frame = document.querySelector(".slideshow__frame");
+const slideshow = document.querySelector(".slideshow");
 
-function createOrbitItems() {
-  const radius = Math.min(window.innerWidth, window.innerHeight) * 0.34;
+let timeline;
+let progress = 0;
 
-  images.forEach((image, index) => {
-    const angle = (index / images.length) * Math.PI * 2;
-    const item = document.createElement("div");
-    item.className = "orbit__item";
+function buildSlideshow() {
+  images.forEach((image) => {
+    const slide = document.createElement("article");
+    slide.className = "slideshow__slide";
 
     const img = document.createElement("img");
     img.src = image.src;
     img.alt = image.alt;
-    img.loading = "lazy";
-    item.appendChild(img);
+    img.loading = "eager";
+    img.decoding = "async";
+    slide.appendChild(img);
 
-    gsap.set(item, {
-      x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius,
-      rotation: (angle * 180) / Math.PI + 90,
-    });
+    track.appendChild(slide);
+  });
 
-    orbit.appendChild(item);
+  return Promise.all(
+    [...track.querySelectorAll("img")].map(
+      (img) =>
+        new Promise((resolve) => {
+          if (img.complete) resolve();
+          else {
+            img.onload = resolve;
+            img.onerror = resolve;
+          }
+        })
+    )
+  );
+}
+
+function getSlideWidth() {
+  return frame.getBoundingClientRect().width;
+}
+
+function syncSlideSizes() {
+  const width = getSlideWidth();
+  if (!width) return;
+
+  gsap.set(track.querySelectorAll(".slideshow__slide"), {
+    width,
+    flexBasis: width,
   });
 }
 
-function initScrollAnimation() {
-  const items = gsap.utils.toArray(".orbit__item");
+function getTotalShift() {
+  return getSlideWidth() * (images.length - 1);
+}
 
-  const tl = gsap.timeline({
-    scrollTrigger: {
-      trigger: ".page",
-      start: "top top",
-      end: "bottom bottom",
-      scrub: 1,
-      pin: ".scroll-stage",
-      anticipatePin: 1,
-    },
-  });
+function buildTimeline() {
+  timeline?.kill();
 
-  tl.to(
-    ".orbit",
-    {
-      rotation: 540,
-      ease: "none",
-    },
-    0
-  )
+  syncSlideSizes();
+
+  const totalShift = getTotalShift();
+  if (!totalShift) return;
+
+  gsap.set(track, { x: 0 });
+  gsap.set(slideshow, { y: 0 });
+
+  timeline = gsap
+    .timeline({ paused: true })
+    .to(track, { x: -totalShift, ease: "none" })
     .to(
-      items,
-      {
-        y: "-=55vh",
-        scale: 0.82,
-        autoAlpha: 0.35,
-        stagger: 0.04,
-        ease: "none",
-      },
-      0
-    )
-    .to(
-      ".orbit__ring",
-      {
-        scale: 1.35,
-        autoAlpha: 0,
-        ease: "none",
-      },
+      slideshow,
+      { y: -Math.min(window.innerHeight * 0.1, 64), ease: "none" },
       0
     );
+
+  timeline.progress(progress);
 }
 
-function initStaticLayout() {
-  gsap.set(".orbit__item", { autoAlpha: 1 });
+function initInteraction() {
+  Observer.create({
+    target: window,
+    type: "wheel,touch,pointer",
+    tolerance: 12,
+    preventDefault: true,
+    onChangeY(self) {
+      const step = self.deltaY / (window.innerHeight * 0.85);
+      progress = gsap.utils.clamp(0, 1, progress + step);
+      timeline?.progress(progress);
+    },
+  });
 }
 
-createOrbitItems();
+buildSlideshow().then(() => {
+  requestAnimationFrame(() => {
+    buildTimeline();
+    initInteraction();
+  });
+});
 
-if (reducedMotion) {
-  initStaticLayout();
-} else {
-  initScrollAnimation();
-}
-
-window.addEventListener("load", () => ScrollTrigger.refresh());
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(buildTimeline, 200);
+});
